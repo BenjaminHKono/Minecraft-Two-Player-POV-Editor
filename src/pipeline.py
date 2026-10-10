@@ -208,7 +208,7 @@ def plan(project: Project, sync: SyncResult, analysis: dict[str, Any] | None, un
         if not any(s.player for s in spans):
             log.warning("No speaker is mapped to a player (diarizer=%s); camera stays on %s. See README "
                         "'Speaker mapping'.", cfg.speakers.diarizer, cfg.editing.default_player)
-        edl = plan_edit(mapping, sources, spans, cfg.editing, cfg.output.audio_source)
+        edl = plan_edit(mapping, sources, spans, cfg.editing, cfg.output.audio_source, silence=cfg.silence)
     edl.metadata.update({"sync": sync.to_dict(), "output": cfg.output.__dict__.copy()})
     edl.validate()
     if save_to:

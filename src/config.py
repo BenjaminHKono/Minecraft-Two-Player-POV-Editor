@@ -40,7 +40,7 @@ class EditingConfig:
     speaker_switch_cooldown_seconds: float = 3.0
     speaker_confidence_threshold: float = 0.5
     default_player: str = "player_a"
-    remove_silence: bool = True  # reserved: dead-time removal is not implemented yet
+    remove_silence: bool = True  # shorten long pauses between speech
     use_gameplay_activity: bool = True  # only used when activity scores are supplied
     preserve_uncertain_gameplay: bool = True
     activity_switch_margin: float = 0.3
@@ -50,8 +50,9 @@ class EditingConfig:
 @dataclass
 class SilenceConfig:
     short_pause_seconds: float = 1.0
-    long_pause_seconds: float = 3.0
+    long_pause_seconds: float = 25.0  # pauses longer than this are removed
     minimum_removal_seconds: float = 5.0
+    lead_in_seconds: float = 3.0  # kept before speech resumes after a removed pause
     speech_padding_seconds: float = 0.25
     threshold_db: float = -40.0  # energy VAD threshold relative to full scale
     minimum_speech_seconds: float = 0.2
@@ -99,7 +100,7 @@ class Config:
             _non_negative(getattr(e, name), f"editing.{name}")
         if not 0 <= e.speaker_confidence_threshold <= 1:
             raise ConfigError("editing.speaker_confidence_threshold must be in [0, 1]")
-        for name in ("short_pause_seconds", "long_pause_seconds", "minimum_removal_seconds", "speech_padding_seconds", "minimum_speech_seconds"):
+        for name in ("short_pause_seconds", "long_pause_seconds", "minimum_removal_seconds", "lead_in_seconds", "speech_padding_seconds", "minimum_speech_seconds"):
             _non_negative(getattr(s, name), f"silence.{name}")
         if s.long_pause_seconds < s.short_pause_seconds:
             raise ConfigError("silence.long_pause_seconds must be >= silence.short_pause_seconds")

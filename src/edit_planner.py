@@ -19,7 +19,7 @@ import math
 from dataclasses import dataclass
 from typing import Callable
 
-from .config import EditingConfig
+from .config import EditingConfig, SilenceConfig
 from .edit_decision_list import EDL, Segment
 from .timeline import PLAYERS, SyncMapping
 
@@ -73,6 +73,75 @@ def _make_edl(mapping: SyncMapping, sources: dict[str, str], switches: list[tupl
     return EDL(sources=src, segments=segments, metadata=metadata)
 
 
+def find_cuts(spans: list[SpeechSpan], r0: float, r1: float, scfg: SilenceConfig) -> list[tuple[float, float]]:
+    """Conservative dead-time cuts on the shared timeline.
+
+    Only pauses *between* two speech spans longer than ``long_pause_seconds`` (and at least
+    ``minimum_removal_seconds``) are removed. ``short_pause_seconds`` of the pause is kept after the previous speech
+    and ``lead_in_seconds`` before the next speech, so the edit cuts in shortly before speaking resumes. Leading and
+    trailing silence, shorter pauses, and everything when no speech is known are left alone.
+    """
+    tail, lead = scfg.short_pause_seconds, scfg.lead_in_seconds
+    threshold = max(scfg.minimum_removal_seconds, scfg.long_pause_seconds, tail + lead + 1e-6)
+    ivs = sorted((max(s.start, r0), min(s.end, r1)) for s in spans if s.end > r0 and s.start < r1)
+    cuts: list[tuple[float, float]] = []
+    reach = None
+    for a, b in ivs:
+        if reach is not None and a - reach > threshold:
+            cuts.append((reach + tail, a - lead))
+        reach = b if reach is None else max(reach, b)
+    return cuts
+
+
+def apply_cuts(edl: EDL, cuts: list[tuple[float, float]], r0: float) -> EDL:
+    """Remove shared-time intervals from an EDL, re-timing the output and recording what was removed."""
+    if not cuts:
+        return edl
+    out: list[Segment] = []
+    removed: list[dict] = []
+    t = 0.0
+    for seg in edl.segments:
+        pieces = [(seg.shared_start, seg.shared_end)]
+        cut_here = False
+        for c0, c1 in cuts:
+            nxt = []
+            for a, b in pieces:
+                if c1 <= a or c0 >= b:
+                    nxt.append((a, b))
+                    continue
+                cut_here = True
+                if c0 > a:
+                    nxt.append((a, c0))
+                if c1 < b:
+                    nxt.append((c1, b))
+            pieces = nxt
+        for a, b in pieces:
+            if b - a <= 1e-6:
+                continue
+            d = b - a
+            new = Segment(**{**seg.__dict__, "audio": dict(seg.audio)})
+            new.shared_start, new.shared_end = round(a, 6), round(b, 6)
+            new.source_start = round(seg.source_start + (a - seg.shared_start), 6)
+            new.source_end = round(new.source_start + d, 6)
+            if new.audio:
+                new.audio["source_start"] = round(seg.audio["source_start"] + (a - seg.shared_start), 6)
+                new.audio["source_end"] = round(new.audio["source_start"] + d, 6)
+            new.output_start = round(t, 6)
+            t += d
+            new.output_end = round(t, 6)
+            if cut_here:
+                new.action = "shortened"
+            out.append(new)
+    for c0, c1 in cuts:
+        removed.append({"shared_start": round(c0, 6), "shared_end": round(c1, 6), "duration": round(c1 - c0, 6),
+                        "reason": "long pause between speech removed"})
+    for a, b in zip(out, out[1:]):
+        b.output_start = a.output_end
+    edl.segments, edl.removed = out, removed
+    edl.metadata["removed_seconds"] = round(sum(c1 - c0 for c0, c1 in cuts), 6)
+    return edl
+
+
 def plan_unedited(mapping: SyncMapping, sources: dict[str, str], player: str = "player_a",
                   audio_player: str = "player_a") -> EDL:
     """Synchronized, uncut render of a single POV (debugging aid)."""
@@ -82,7 +151,8 @@ def plan_unedited(mapping: SyncMapping, sources: dict[str, str], player: str = "
 
 
 def plan_edit(mapping: SyncMapping, sources: dict[str, str], spans: list[SpeechSpan], cfg: EditingConfig,
-              audio_player: str = "player_a", activity: ActivityFn | None = None) -> EDL:
+              audio_player: str = "player_a", activity: ActivityFn | None = None,
+              silence: SilenceConfig | None = None) -> EDL:
     """Create an EDL choosing a POV over the common shared range."""
     r0, r1 = mapping.common_range()
     dt = cfg.planning_step_seconds
@@ -133,5 +203,11 @@ def plan_edit(mapping: SyncMapping, sources: dict[str, str], spans: list[SpeechS
             switches.append((t, want, reason))
             current, last_switch, cand = want, t, None
     log.info("Planned %d shots over %.1fs", len(switches), r1 - r0)
-    return _make_edl(mapping, sources, switches, r0, r1, usable, activity, audio_player,
-                     {"mode": "auto", "editing": cfg.__dict__.copy()})
+    edl = _make_edl(mapping, sources, switches, r0, r1, usable, activity, audio_player,
+                    {"mode": "auto", "editing": cfg.__dict__.copy()})
+    if silence is not None and cfg.remove_silence:
+        cuts = find_cuts(spans, r0, r1, silence)
+        if cuts:
+            log.info("Shortening %d long pause(s), removing %.1fs", len(cuts), sum(b - a for a, b in cuts))
+        edl = apply_cuts(edl, cuts, r0)
+    return edl
