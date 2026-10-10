@@ -1,0 +1,16 @@
+[project]
+name = "minecraft-pov-editor"
+version = "0.1.0"
+description = "Automatically combine two Minecraft POV recordings into one edited video"
+requires-python = ">=3.12"
+dependencies = ["numpy>=1.26", "scipy>=1.11", "soundfile>=0.12"]
+
+[project.optional-dependencies]
+transcription = ["faster-whisper>=1.0"]
+diarization = ["pyannote.audio>=3.1"]
+video = ["opencv-python>=4.9"]
+dev = ["pytest>=8.0"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

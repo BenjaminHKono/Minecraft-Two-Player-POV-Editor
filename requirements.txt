@@ -1,0 +1,8 @@
+numpy>=1.26
+scipy>=1.11
+soundfile>=0.12
+pytest>=8.0
+# Optional (see README):
+# faster-whisper>=1.0     # transcription
+# pyannote.audio>=3.1     # speaker diarization
+# opencv-python>=4.9      # gameplay activity (future)
