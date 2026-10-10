@@ -75,8 +75,12 @@ class PyannoteDiarizer:
         token = os.environ.get("HF_TOKEN")
         if not token:
             raise OptionalDependencyError("Set the HF_TOKEN environment variable to download pyannote models (see README).")
-        pipeline = Pipeline.from_pretrained(self.model, use_auth_token=token)
+        try:
+            pipeline = Pipeline.from_pretrained(self.model, token=token)  # pyannote.audio >= 4
+        except TypeError:
+            pipeline = Pipeline.from_pretrained(self.model, use_auth_token=token)  # pyannote.audio 3.x
         result = pipeline(str(wav_path))
+        result = getattr(result, "speaker_diarization", result)  # 4.x wraps the Annotation
         return [SpeakerSegment(turn.start, turn.end, label, 1.0)
                 for turn, _, label in result.itertracks(yield_label=True)]
 
