@@ -76,18 +76,19 @@ def _make_edl(mapping: SyncMapping, sources: dict[str, str], switches: list[tupl
 def find_cuts(spans: list[SpeechSpan], r0: float, r1: float, scfg: SilenceConfig) -> list[tuple[float, float]]:
     """Conservative dead-time cuts on the shared timeline.
 
-    Only pauses *between* two speech spans that last at least ``minimum_removal_seconds`` are touched, and they are
-    shortened rather than deleted: ``long_pause_seconds`` of the pause is kept (half on each side). Leading and
+    Only pauses *between* two speech spans longer than ``long_pause_seconds`` (and at least
+    ``minimum_removal_seconds``) are removed. ``short_pause_seconds`` of the pause is kept after the previous speech
+    and ``lead_in_seconds`` before the next speech, so the edit cuts in shortly before speaking resumes. Leading and
     trailing silence, shorter pauses, and everything when no speech is known are left alone.
     """
-    keep = scfg.long_pause_seconds
-    threshold = max(scfg.minimum_removal_seconds, keep, 1e-6)
+    tail, lead = scfg.short_pause_seconds, scfg.lead_in_seconds
+    threshold = max(scfg.minimum_removal_seconds, scfg.long_pause_seconds, tail + lead + 1e-6)
     ivs = sorted((max(s.start, r0), min(s.end, r1)) for s in spans if s.end > r0 and s.start < r1)
     cuts: list[tuple[float, float]] = []
     reach = None
     for a, b in ivs:
-        if reach is not None and a - reach >= threshold:
-            cuts.append((reach + keep / 2, a - keep / 2))
+        if reach is not None and a - reach > threshold:
+            cuts.append((reach + tail, a - lead))
         reach = b if reach is None else max(reach, b)
     return cuts
 
@@ -133,7 +134,7 @@ def apply_cuts(edl: EDL, cuts: list[tuple[float, float]], r0: float) -> EDL:
             out.append(new)
     for c0, c1 in cuts:
         removed.append({"shared_start": round(c0, 6), "shared_end": round(c1, 6), "duration": round(c1 - c0, 6),
-                        "reason": "long pause between speech shortened"})
+                        "reason": "long pause between speech removed"})
     for a, b in zip(out, out[1:]):
         b.output_start = a.output_end
     edl.segments, edl.removed = out, removed

@@ -137,7 +137,7 @@ def test_long_pause_shortened_and_short_kept():
     spans = [span(2, 10, "player_a"), span(12, 20, "player_a"), span(50, 60, "player_a")]
     edl = plan_edit(M, SOURCES, spans, EditingConfig(), silence=SilenceConfig())
     edl.validate()
-    assert edl.output_duration == pytest.approx(60 - 5)  # 30s pause cut to 25s
+    assert edl.output_duration == pytest.approx(60 - 26)  # 30s pause: keep 1s after, 3s before next speech
     assert len(edl.removed) == 1 and any(s.action == "shortened" for s in edl.segments)
     off = plan_edit(M, SOURCES, spans, EditingConfig(remove_silence=False), silence=SilenceConfig())
     assert off.output_duration == pytest.approx(60) and not off.removed
