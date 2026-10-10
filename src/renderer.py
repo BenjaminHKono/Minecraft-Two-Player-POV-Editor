@@ -31,7 +31,7 @@ def build_filter_graph(edl: EDL, out: OutputConfig) -> str:
     return ";\n".join(parts)
 
 
-def build_command(edl: EDL, out: OutputConfig, output_path: str | Path, filter_script: str | Path,
+def build_command(edl: EDL, out: OutputConfig, output_path: str | Path, filter_graph: str,
                   ffmpeg: str = "ffmpeg") -> list[str]:
     """Build the ffmpeg command line. Each segment is read with its own ``-ss/-t`` input (accurate seek)."""
     cmd = [ffmpeg, "-hide_banner", "-v", "error", "-y", "-progress", "pipe:1", "-nostats"]
@@ -40,7 +40,7 @@ def build_command(edl: EDL, out: OutputConfig, output_path: str | Path, filter_s
         cmd += ["-ss", f"{s.source_start:.6f}", "-t", f"{dur:.6f}", "-i", s.source_file]
         a = s.audio
         cmd += ["-ss", f"{a['source_start']:.6f}", "-t", f"{dur:.6f}", "-i", a["source_file"]]
-    cmd += ["-filter_complex_script", str(filter_script), "-map", "[vout]", "-map", "[aout]",
+    cmd += ["-filter_complex", filter_graph, "-map", "[vout]", "-map", "[aout]",
             "-c:v", out.video_codec, "-crf", str(out.crf), "-preset", out.preset,
             "-c:a", out.audio_codec, "-b:a", out.audio_bitrate, "-movflags", "+faststart",
             "-f", "mp4", str(output_path)]
@@ -58,9 +58,7 @@ def render(edl: EDL, out: OutputConfig, output_path: str | Path,
     total = edl.output_duration
     start = time.monotonic()
     with tempfile.TemporaryDirectory(prefix="povedit_") as td:
-        script = Path(td) / "filters.txt"
-        script.write_text(build_filter_graph(edl, out), encoding="utf-8")
-        cmd = build_command(edl, out, tmp_out, script, ffmpeg)
+        cmd = build_command(edl, out, tmp_out, build_filter_graph(edl, out), ffmpeg)
         log.info("Rendering %d segments (%.1fs) to %s", len(edl.segments), total, output_path)
         log.debug("ffmpeg command: %s", cmd)
         try:
