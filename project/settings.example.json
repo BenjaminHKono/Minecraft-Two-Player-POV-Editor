@@ -10,5 +10,5 @@
               "speaker_confidence_threshold": 0.5, "default_player": "player_a", "use_gameplay_activity": true},
   "silence": {"speech_padding_seconds": 0.25, "threshold_db": -40.0},
   "synchronization": {"method": "audio_cross_correlation", "manual_offset_seconds": null},
-  "speakers": {"diarizer": "none", "segments_file": null, "mapping": {"SPEAKER_00": "player_a", "SPEAKER_01": "player_b"}}
+  "speakers": {"diarizer": "pyannote", "segments_file": null, "mapping": {"SPEAKER_00": "player_a", "SPEAKER_01": "player_b"}}
 }
