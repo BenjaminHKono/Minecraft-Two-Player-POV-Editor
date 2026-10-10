@@ -1,0 +1,14 @@
+{
+  "project": {
+    "player_a": "input/player_a.mp4",
+    "player_b": "input/player_b.mp4",
+    "output": "output/final.mp4",
+    "work_dir": "cache"
+  },
+  "output": {"resolution": "1920x1080", "fps": 60, "video_codec": "libx264", "audio_codec": "aac", "audio_source": "player_a"},
+  "editing": {"minimum_shot_seconds": 2.0, "speaker_switch_threshold_seconds": 1.0, "speaker_switch_cooldown_seconds": 3.0,
+              "speaker_confidence_threshold": 0.5, "default_player": "player_a", "use_gameplay_activity": true},
+  "silence": {"speech_padding_seconds": 0.25, "threshold_db": -40.0},
+  "synchronization": {"method": "audio_cross_correlation", "manual_offset_seconds": null},
+  "speakers": {"diarizer": "none", "segments_file": null, "mapping": {"SPEAKER_00": "player_a", "SPEAKER_01": "player_b"}}
+}

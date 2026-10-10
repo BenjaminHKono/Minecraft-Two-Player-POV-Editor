@@ -1,0 +1,25 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+*.egg-info/
+# recordings, outputs, caches
+input/*
+output/*
+cache/*
+!input/.gitkeep
+!output/.gitkeep
+!cache/.gitkeep
+*.mp4
+*.mkv
+*.mov
+*.wav
+*.pt
+*.bin
+*.onnx
+# secrets
+.env
+*.token
+secrets.json
+project/*.local.json
