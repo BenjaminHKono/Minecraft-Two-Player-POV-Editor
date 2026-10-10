@@ -50,7 +50,7 @@ class EditingConfig:
 @dataclass
 class SilenceConfig:
     short_pause_seconds: float = 1.0
-    long_pause_seconds: float = 3.0
+    long_pause_seconds: float = 25.0
     minimum_removal_seconds: float = 5.0
     speech_padding_seconds: float = 0.25
     threshold_db: float = -40.0  # energy VAD threshold relative to full scale

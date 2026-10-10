@@ -134,10 +134,10 @@ def test_initial_camera_follows_first_speaker():
 
 def test_long_pause_shortened_and_short_kept():
     from src.config import SilenceConfig
-    spans = [span(2, 10, "player_a"), span(12, 20, "player_a"), span(40, 50, "player_a")]
+    spans = [span(2, 10, "player_a"), span(12, 20, "player_a"), span(50, 60, "player_a")]
     edl = plan_edit(M, SOURCES, spans, EditingConfig(), silence=SilenceConfig())
     edl.validate()
-    assert edl.output_duration == pytest.approx(60 - 17)  # 20s pause cut to 3s
+    assert edl.output_duration == pytest.approx(60 - 5)  # 30s pause cut to 25s
     assert len(edl.removed) == 1 and any(s.action == "shortened" for s in edl.segments)
     off = plan_edit(M, SOURCES, spans, EditingConfig(remove_silence=False), silence=SilenceConfig())
     assert off.output_duration == pytest.approx(60) and not off.removed

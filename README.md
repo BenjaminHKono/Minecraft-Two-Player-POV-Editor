@@ -17,7 +17,7 @@ inspectable edit decision list (EDL, JSON) and renders with FFmpeg. Everything r
 | FFmpeg render (H.264/AAC, one continuous audio track, atomic output) | implemented |
 | Caching keyed on file metadata + config | implemented |
 | Gameplay activity (OpenCV) | **not implemented**; the planner accepts an activity function (`ActivityFn`) as extension point |
-| Conservative pause shortening | implemented: pauses between speech of at least `silence.minimum_removal_seconds` are cut down to `silence.long_pause_seconds` (disable with `editing.remove_silence`); leading/trailing silence and shorter pauses are kept. `short_pause_seconds` is unused |
+| Conservative pause shortening | implemented: pauses between speech of at least `silence.minimum_removal_seconds` are cut down to `silence.long_pause_seconds` (default 25 s, so by default only pauses over 25 s are shortened; disable with `editing.remove_silence`); leading/trailing silence and shorter pauses are kept. `short_pause_seconds` is unused |
 | Piecewise drift correction, GUI, semantic events | roadmap |
 
 ## Architecture
