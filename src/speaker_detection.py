@@ -75,11 +75,26 @@ class PyannoteDiarizer:
         token = os.environ.get("HF_TOKEN")
         if not token:
             raise OptionalDependencyError("Set the HF_TOKEN environment variable to download pyannote models (see README).")
+        import inspect
+        kwarg = "token" if "token" in inspect.signature(Pipeline.from_pretrained).parameters else "use_auth_token"
         try:
-            pipeline = Pipeline.from_pretrained(self.model, token=token)  # pyannote.audio >= 4
-        except TypeError:
-            pipeline = Pipeline.from_pretrained(self.model, use_auth_token=token)  # pyannote.audio 3.x
-        result = pipeline(str(wav_path))
+            pipeline = Pipeline.from_pretrained(self.model, **{kwarg: token})
+            if pipeline is None:
+                raise RuntimeError("model could not be loaded (accept the model terms on huggingface.co and check HF_TOKEN)")
+            # Decode the wav ourselves: pyannote 4 relies on torchcodec/FFmpeg, which is often broken on Windows.
+            import wave
+            import numpy as np
+            import torch
+            with wave.open(str(wav_path), "rb") as w:
+                rate, ch, width = w.getframerate(), w.getnchannels(), w.getsampwidth()
+                raw = w.readframes(w.getnframes())
+            if width != 2:
+                raise RuntimeError(f"expected 16-bit PCM wav, got {8 * width}-bit")
+            data = np.frombuffer(raw, dtype="<i2").astype("float32") / 32768.0
+            waveform = torch.from_numpy(data.reshape(-1, ch).T.copy())
+            result = pipeline({"waveform": waveform, "sample_rate": rate})
+        except Exception as exc:
+            raise OptionalDependencyError(f"pyannote diarization failed: {type(exc).__name__}: {exc}") from exc
         result = getattr(result, "speaker_diarization", result)  # 4.x wraps the Annotation
         return [SpeakerSegment(turn.start, turn.end, label, 1.0)
                 for turn, _, label in result.itertracks(yield_label=True)]
