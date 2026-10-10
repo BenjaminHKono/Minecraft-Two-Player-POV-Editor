@@ -40,7 +40,7 @@ class EditingConfig:
     speaker_switch_cooldown_seconds: float = 3.0
     speaker_confidence_threshold: float = 0.5
     default_player: str = "player_a"
-    remove_silence: bool = True  # reserved: dead-time removal is not implemented yet
+    remove_silence: bool = True  # shorten long pauses between speech
     use_gameplay_activity: bool = True  # only used when activity scores are supplied
     preserve_uncertain_gameplay: bool = True
     activity_switch_margin: float = 0.3
