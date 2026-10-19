@@ -1,6 +1,6 @@
 # Minecraft Two-Player POV Editor
 
-Command-line tool that combines two Minecraft POV recordings of the same voice chat into one MP4: it synchronizes
+Desktop and command-line tool that combines two Minecraft POV recordings of the same voice chat into one MP4: it synchronizes
 them from their shared audio, detects speech, chooses which POV to show with deterministic rules, writes an
 inspectable edit decision list (EDL, JSON) and renders with FFmpeg. Everything runs locally.
 
@@ -18,7 +18,7 @@ inspectable edit decision list (EDL, JSON) and renders with FFmpeg. Everything r
 | Caching keyed on file metadata + config | implemented |
 | Gameplay activity (OpenCV) | **not implemented**; the planner accepts an activity function (`ActivityFn`) as extension point |
 | Conservative pause removal | implemented: pauses between speech longer than `silence.long_pause_seconds` (default 25 s, and at least `silence.minimum_removal_seconds`) are removed, keeping `silence.short_pause_seconds` after the previous speech and `silence.lead_in_seconds` (3 s) before the next, so the cut-in is not jarring (disable with `editing.remove_silence`); leading/trailing silence and shorter pauses are kept |
-| Piecewise drift correction, GUI, semantic events | roadmap |
+| Desktop GUI, semantic events, piecewise drift correction | GUI implemented; others on roadmap |
 
 ## Architecture
 
@@ -66,8 +66,13 @@ python -m src.main analyze --project project/settings.json
 python -m src.main plan    --project project/settings.json --map SPEAKER_00=player_a --map SPEAKER_01=player_b
 python -m src.main render  --project project/settings.json            # or --edl cache/edl.json (after hand-editing)
 python -m src.main run --player-a input/player_a.mp4 --player-b input/player_b.mp4 --output output/final.mp4
+python -m src.gui
 python -m src.main validate cache/edl.json
 ```
+The desktop app lets you select both recordings and an output path, then runs the same pipeline as the CLI. A project
+settings JSON can be selected to use custom speaker mappings or output settings. Tkinter is included with standard
+Windows Python installations; on Linux, install your distribution's Tk package if `python -m src.gui` reports that
+`tkinter` is missing.
 Useful flags: `--offset`, `--map`, `--diarizer`, `--speaker-segments`, `--no-silence-removal`, `--no-activity`,
 `--unedited` (synchronized, uncut Player A render for debugging), `--config`, `--work-dir`, `-v`.
 `synchronize` writes `<work-dir>/sync_report.json`; `plan` writes `<work-dir>/edl.json`. Diarization labels
